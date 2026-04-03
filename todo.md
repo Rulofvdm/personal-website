@@ -1,0 +1,1 @@
+https://dash.cloudflare.com/cfb937a9c93c8941391553d9d0bb4a2d/workers-and-pages/create
