@@ -1,0 +1,12 @@
+<section class="section" appFadeIn>
+  <h2>Contact</h2>
+  <a class="github" href="https://github.com/rulofvdm" target="_blank" rel="noopener noreferrer">
+    github.com/rulofvdm
+  </a>
+  <button class="ssh-egg" (click)="copySSH()" aria-label="Copy SSH command">
+    <span class="prompt">$</span> ssh rulof.dev
+    @if (copied()) {
+      <span class="copied">copied</span>
+    }
+  </button>
+</section>

@@ -13,15 +13,16 @@
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
           nodejs_22
-          angular-cli
-          typescript
-          nodePackages.npm
         ];
 
         shellHook = ''
-          echo "Angular dev shell loaded"
-          node --version
-          ng version
+          export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+          export PATH="$HOME/.npm-global/bin:$PATH"
+          if ! command -v ng &> /dev/null; then
+            echo "Installing @angular/cli..."
+            npm install -g @angular/cli
+          fi
+          echo "Angular dev shell loaded — node $(node --version)"
         '';
       };
     };

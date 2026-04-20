@@ -1,0 +1,26 @@
+:root {
+  // Core palette
+  --color-bg: #1d2021;
+  --color-surface: #282828;
+  --color-surface-2: #3c3836;
+  --color-text: #ebdbb2;
+  --color-text-muted: #928374;
+
+  // Accents
+  --color-accent: #5d8a5d;
+  --color-accent-strong: #a9b665;
+  --color-danger: #fb4934;
+
+  // Shape
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --border-strong: 2px solid var(--color-accent);
+  --border-soft: 1px solid var(--color-surface-2);
+
+  // Typography
+  --font-ui: "DepartureMono Nerd Font Mono", "JetBrains Mono", monospace;
+
+  // Layout
+  --max-width: 720px;
+}

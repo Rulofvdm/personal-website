@@ -1,0 +1,30 @@
+.hero {
+  padding: 7rem 1.5rem 5rem;
+  max-width: var(--max-width);
+  margin: 0 auto;
+
+  .prompt {
+    color: var(--color-accent);
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+    opacity: 0.6;
+  }
+
+  h1 {
+    margin-bottom: 0.4rem;
+  }
+
+  .subtitle {
+    color: var(--color-text-muted);
+    font-size: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .tagline {
+    display: flex;
+    align-items: center;
+    color: var(--color-accent-strong);
+    font-size: 0.95rem;
+    min-height: 1.4em;
+  }
+}

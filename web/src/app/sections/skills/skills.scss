@@ -1,0 +1,24 @@
+.skill-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.group {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 1rem;
+  align-items: baseline;
+
+  .label {
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .items {
+    color: var(--color-text);
+    font-size: 0.95rem;
+  }
+}
