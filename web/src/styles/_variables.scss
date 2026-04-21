@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "DepartureMono";
+  src: url("/fonts/DepartureMonoNerdFontMono-Regular.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   // Core palette
   --color-bg: #1d2021;
@@ -19,7 +27,7 @@
   --border-soft: 1px solid var(--color-surface-2);
 
   // Typography
-  --font-ui: "DepartureMono Nerd Font Mono", "JetBrains Mono", monospace;
+  --font-ui: "DepartureMono", "JetBrains Mono", monospace;
 
   // Layout
   --max-width: 720px;
