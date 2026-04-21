@@ -13,7 +13,7 @@ JOBJACK — L2 Software Developer
 ~3 years · Cape Town, South Africa
 
 — Core contributor on a platform serving 2M+ users
-  and facilitating 18,700+ hires
+  and that facilitated 18,700+  in 2025
 — Optimised a critical GraphQL query, reducing load
   time by ~100× (seconds → milliseconds)
 — Stack: Angular, TypeScript, Node.js, GraphQL, PostgreSQL";
@@ -21,7 +21,7 @@ JOBJACK — L2 Software Developer
 pub const SKILLS: &str = "\
 Frontend   Angular, TypeScript, RxJS, SCSS
 Backend    Node.js, GraphQL, PostgreSQL
-Tooling    NixOS, Git, Docker (basics)
+Tooling    NixOS, Git, Docker, Cloudflare
 Learning   Rust, systems programming";
 
 pub const PROJECTS: &str = "\
