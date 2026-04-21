@@ -1,0 +1,17 @@
+[package]
+name = "rulof-tui"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rulof-tui"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+russh = "0.44"
+russh-keys = "0.44"
+ratatui = "0.29"
+crossterm = "0.28"
+anyhow = "1"
+async-trait = "0.1"
