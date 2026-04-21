@@ -1,0 +1,21 @@
+name: Deploy TUI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tui/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.TUI_HOST }}
+          username: rulof
+          key: ${{ secrets.TUI_SSH_KEY }}
+          script: |
+            source ~/.cargo/env
+            /opt/rulof/deploy.sh
