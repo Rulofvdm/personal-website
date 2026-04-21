@@ -8,11 +8,11 @@ use crossterm::{
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
-    Frame, Terminal,
+    Frame, Terminal, TerminalOptions, Viewport,
 };
 use russh::{server::Handle, ChannelId, CryptoVec};
 use tokio::sync::mpsc;
@@ -167,16 +167,17 @@ pub async fn run(
     handle: Handle,
     channel: ChannelId,
     mut input_rx: mpsc::UnboundedReceiver<Vec<u8>>,
-    _cols: u16,
-    _rows: u16,
+    cols: u16,
+    rows: u16,
 ) -> Result<()> {
     let mut writer = SshWriter { handle: handle.clone(), channel, buf: Vec::new() };
 
     execute!(writer, EnterAlternateScreen, cursor::Hide)?;
 
     let backend = CrosstermBackend::new(writer);
-    let mut terminal = Terminal::new(backend)?;
-    terminal.clear()?;
+    let mut terminal = Terminal::with_options(backend, TerminalOptions {
+        viewport: Viewport::Fixed(Rect::new(0, 0, cols, rows)),
+    })?;
 
     let mut app = App::new();
     terminal.draw(|f| render(f, &app))?;

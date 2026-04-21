@@ -11,15 +11,21 @@ use tokio::net::TcpListener;
 
 use server::AppServer;
 
-const HOST_KEY_PATH: &str = "/home/rulof/.config/rulof-tui/host_key";
+fn host_key_path() -> std::path::PathBuf {
+    let dir = dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
+        .join(".config/rulof-tui");
+    std::fs::create_dir_all(&dir).expect("failed to create config dir");
+    dir.join("host_key")
+}
 
 fn load_or_create_host_key() -> Result<KeyPair> {
-    std::fs::create_dir_all("/home/rulof/.config/rulof-tui")?;
-    if std::path::Path::new(HOST_KEY_PATH).exists() {
-        Ok(russh_keys::load_secret_key(HOST_KEY_PATH, None)?)
+    let path = host_key_path();
+    if path.exists() {
+        Ok(russh_keys::load_secret_key(&path, None)?)
     } else {
         let key = KeyPair::generate_ed25519().expect("failed to generate host key");
-        let file = std::fs::File::create(HOST_KEY_PATH)?;
+        let file = std::fs::File::create(&path)?;
         russh_keys::encode_pkcs8_pem(&key, file)?;
         Ok(key)
     }
