@@ -16,6 +16,7 @@ jobs:
           host: ${{ secrets.TUI_HOST }}
           username: rulof
           key: ${{ secrets.TUI_SSH_KEY }}
+          port: 2222
           script: |
             source ~/.cargo/env
             /opt/rulof/deploy.sh
