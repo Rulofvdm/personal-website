@@ -22,7 +22,7 @@ pub const SKILLS: &str = "\
 Frontend   Angular, TypeScript, RxJS, SCSS
 Backend    Node.js, GraphQL, PostgreSQL
 Tooling    NixOS, Git, Docker, Cloudflare
-Learning   Rust, systems programming";
+Learning   Rust";
 
 pub const PROJECTS: &str = "\
 rulof.dev
