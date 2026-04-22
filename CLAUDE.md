@@ -74,7 +74,7 @@ Single page, no routing.
 - Single accent colour — pick one and commit (amber `#f5a623`, electric green `#39ff14`, or desaturated teal)
 - No gradients. No cards. No box shadows everywhere.
 - Blinking cursor in hero (CSS only)
-- SSH Easter egg at bottom: `$ ssh rulof.dev` — clicking copies to clipboard, shows brief "copied" confirmation
+- SSH Easter egg at bottom: `$ ssh tui.rulof.dev` — clicking copies to clipboard, shows brief "copied" confirmation
 
 ### Content Source of Truth
 

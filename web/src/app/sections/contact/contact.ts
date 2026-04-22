@@ -12,7 +12,7 @@ export class ContactComponent {
 
   async copySSH() {
     try {
-      await navigator.clipboard.writeText('ssh rulof.dev');
+      await navigator.clipboard.writeText('ssh tui.rulof.dev');
       this.copied.set(true);
       setTimeout(() => this.copied.set(false), 2000);
     } catch {}
