@@ -18,5 +18,6 @@ jobs:
           key: ${{ secrets.TUI_SSH_KEY }}
           port: 2222
           script: |
+            git config --global --add safe.directory /opt/rulof
             source ~/.cargo/env
             /opt/rulof/deploy.sh

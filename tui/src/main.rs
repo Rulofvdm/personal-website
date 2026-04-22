@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     });
 
     let listener = TcpListener::bind("0.0.0.0:22").await?;
-    eprintln!("Listening on 0.0.0.0:2222");
+    eprintln!("Listening on 0.0.0.0:22");
 
     let mut srv = AppServer;
 

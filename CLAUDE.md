@@ -94,7 +94,7 @@ See the spec document. Key copy:
 - `russh` — async SSH server
 - `ratatui` — TUI framework
 - `tokio` — async runtime
-- Port: 2222
+- Port: 22
 
 ### Architecture
 
