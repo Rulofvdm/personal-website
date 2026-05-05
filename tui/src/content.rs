@@ -1,4 +1,6 @@
 pub const ABOUT: &str = "\
+Use / for the jump menu.
+
 I build web applications and the infrastructure around them.
 Four years in production across Angular frontends, GraphQL APIs,
 and PostgreSQL backends.
@@ -35,3 +37,13 @@ pub const CONTACT: &str = "\
 github.com/rulofvdm
 
 You're already here the cool way.";
+
+pub const KANA_INFO: &str = "\
+How to open this drill
+
+  • On the main screen, type kana (letters only, any case).
+
+  • Or press / for the jump menu and pick kana at the bottom.
+
+  • Over SSH with a TTY:
+      ssh -t tui.rulof.dev kana";

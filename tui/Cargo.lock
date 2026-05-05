@@ -1228,6 +1228,7 @@ dependencies = [
  "async-trait",
  "crossterm",
  "dirs",
+ "rand",
  "ratatui",
  "russh",
  "russh-keys",

@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use anyhow::Result;
 use crossterm::{
     cursor,
@@ -9,121 +7,248 @@ use crossterm::{
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
     Frame, Terminal, TerminalOptions, Viewport,
 };
-use russh::{server::Handle, ChannelId, CryptoVec};
+use russh::{server::Handle, ChannelId};
 use tokio::sync::mpsc;
 
+use crate::branding::{self, render_footer_hint, render_site_header, ACCENT_STR, MUTED, SURFACE2, TEXT};
 use crate::content;
-
-// ── Colours (Gruvbox dark) ────────────────────────────────────────────────────
-
-const TEXT: Color       = Color::Rgb(235, 219, 178);
-const MUTED: Color      = Color::Rgb(146, 131, 116);
-const ACCENT: Color     = Color::Rgb(93, 138, 93);
-const ACCENT_STR: Color = Color::Rgb(169, 182, 101);
-const SURFACE2: Color   = Color::Rgb(60, 56, 54);
-
-// ── SSH writer ────────────────────────────────────────────────────────────────
-
-struct SshWriter {
-    handle: Handle,
-    channel: ChannelId,
-    buf: Vec<u8>,
-}
-
-impl Write for SshWriter {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.buf.extend_from_slice(buf);
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        if self.buf.is_empty() {
-            return Ok(());
-        }
-        let data = CryptoVec::from(std::mem::take(&mut self.buf));
-        let handle = self.handle.clone();
-        let channel = self.channel;
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async move {
-                let _ = handle.data(channel, data).await;
-            });
-        });
-        Ok(())
-    }
-}
-
-// ── App state ─────────────────────────────────────────────────────────────────
+use crate::events::TuiEvent;
+use crate::kana;
+use crate::ssh_writer::SshWriter;
 
 const TABS: &[&str] = &["about", "experience", "skills", "projects", "contact"];
 
+const PALETTE: &[(&str, GoTo, bool)] = &[
+    ("about", GoTo::Section(0), false),
+    ("experience", GoTo::Section(1), false),
+    ("skills", GoTo::Section(2), false),
+    ("projects", GoTo::Section(3), false),
+    ("contact", GoTo::Section(4), false),
+    ("kana", GoTo::Kana, true),
+];
+
+#[derive(Clone, Copy)]
+pub(crate) enum GoTo {
+    Section(usize),
+    Kana,
+}
+
+#[derive(Clone, Copy, Default)]
+pub enum SessionStart {
+    #[default]
+    Main,
+    /// Open the kana drill first; return to main when it ends.
+    Kana,
+}
+
+/// Whether this session was opened as an interactive shell or a remote command (`exec`).
+#[derive(Clone, Copy, Default)]
+pub enum ChannelMode {
+    #[default]
+    Shell,
+    Exec,
+}
+
+struct PaletteState {
+    query: String,
+    /// Index into the filtered list from [`palette_filtered`].
+    selected: usize,
+}
+
+impl PaletteState {
+    fn new() -> Self {
+        Self {
+            query: String::new(),
+            selected: 0,
+        }
+    }
+}
+
 struct App {
     tab: usize,
+    palette: Option<PaletteState>,
 }
 
 impl App {
-    fn new() -> Self { Self { tab: 0 } }
-
-    fn next(&mut self) { self.tab = (self.tab + 1) % TABS.len(); }
-
-    fn prev(&mut self) {
-        if self.tab == 0 { self.tab = TABS.len() - 1; } else { self.tab -= 1; }
-    }
-}
-
-// ── Input ─────────────────────────────────────────────────────────────────────
-
-fn handle_input(data: &[u8], app: &mut App) -> bool {
-    if data == b"\x1b[C" { app.next(); return false; }
-    if data == b"\x1b[D" { app.prev(); return false; }
-    if data.len() == 1 {
-        match data[0] {
-            b'q' | b'Q' | 3 => return true, // q, Q, Ctrl-C
-            b'l'            => app.next(),
-            b'h'            => app.prev(),
-            _               => {}
+    fn new() -> Self {
+        Self {
+            tab: 0,
+            palette: None,
         }
     }
-    false
+
+    fn next(&mut self) {
+        self.tab = (self.tab + 1) % TABS.len();
+    }
+
+    fn prev(&mut self) {
+        if self.tab == 0 {
+            self.tab = TABS.len() - 1;
+        } else {
+            self.tab -= 1;
+        }
+    }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+fn palette_filtered(query: &str) -> Vec<(usize, GoTo, bool)> {
+    let q = query.to_ascii_lowercase();
+    PALETTE
+        .iter()
+        .enumerate()
+        .filter(|(_, (cmd, _, _))| q.is_empty() || cmd.starts_with(&q))
+        .map(|(i, &(_, goto, secret))| (i, goto, secret))
+        .collect()
+}
 
-fn centered_column(area: ratatui::layout::Rect, max_width: u16) -> ratatui::layout::Rect {
-    let width = max_width.min(area.width);
-    let x = area.x + (area.width.saturating_sub(width)) / 2;
-    ratatui::layout::Rect { x, width, ..area }
+enum SiteAction {
+    Quit,
+    Handled,
+    PassThrough,
+}
+
+fn handle_site_input(data: &[u8], app: &mut App) -> SiteAction {
+    if data == b"\x1b[C" {
+        app.next();
+        return SiteAction::Handled;
+    }
+    if data == b"\x1b[D" {
+        app.prev();
+        return SiteAction::Handled;
+    }
+    if data.len() == 1 {
+        match data[0] {
+            b'q' | b'Q' | 3 => return SiteAction::Quit,
+            b'l' => {
+                app.next();
+                return SiteAction::Handled;
+            }
+            b'h' => {
+                app.prev();
+                return SiteAction::Handled;
+            }
+            _ => {}
+        }
+    }
+    SiteAction::PassThrough
+}
+
+enum PaletteAction {
+    /// Close the palette and stay on the current screen.
+    Dismiss,
+    /// Close the palette and perform navigation.
+    Go(GoTo),
+    /// Keep the palette open (redraw).
+    Stay,
+}
+
+fn handle_palette_input(data: &[u8], p: &mut PaletteState) -> PaletteAction {
+    let filtered = palette_filtered(&p.query);
+
+    if data == b"\x1b[A" {
+        if !filtered.is_empty() {
+            p.selected = p.selected.saturating_sub(1);
+        }
+        return PaletteAction::Stay;
+    }
+    if data == b"\x1b[B" {
+        if !filtered.is_empty() {
+            let max = filtered.len() - 1;
+            p.selected = (p.selected + 1).min(max);
+        }
+        return PaletteAction::Stay;
+    }
+
+    if data.len() == 1 {
+        match data[0] {
+            0x1b | 3 => return PaletteAction::Dismiss,
+            b'q' | b'Q' => return PaletteAction::Dismiss,
+            b'\r' | b'\n' => {
+                if let Some(&(_, goto, _)) = filtered.get(p.selected) {
+                    return PaletteAction::Go(goto);
+                }
+                return PaletteAction::Stay;
+            }
+            0x7f | 0x08 => {
+                p.query.pop();
+                p.selected = 0;
+                return PaletteAction::Stay;
+            }
+            b if b.is_ascii_graphic() => {
+                p.query.push(b as char);
+                p.selected = 0;
+                let next = palette_filtered(&p.query);
+                if !next.is_empty() && p.selected >= next.len() {
+                    p.selected = next.len() - 1;
+                }
+                return PaletteAction::Stay;
+            }
+            _ => return PaletteAction::Stay,
+        }
+    }
+
+    PaletteAction::Stay
+}
+
+/// Typing `kana` (any mix of case) launches the hidden drill. Skips chunks that look like escapes.
+struct KanaEgg {
+    buf: String,
+}
+
+impl KanaEgg {
+    fn new() -> Self {
+        Self { buf: String::new() }
+    }
+
+    fn feed(&mut self, data: &[u8]) -> bool {
+        if data.contains(&0x1b) {
+            return false;
+        }
+        for &b in data {
+            if !b.is_ascii_alphabetic() {
+                continue;
+            }
+            let c = (b as char).to_ascii_lowercase();
+            self.buf.push(c);
+            while self.buf.len() > 4 {
+                self.buf.remove(0);
+            }
+            if self.buf == "kana" {
+                self.buf.clear();
+                return true;
+            }
+        }
+        false
+    }
 }
 
 fn render(frame: &mut Frame, app: &App) {
     let area = frame.area();
-    let col = centered_column(area, 90);
+    let col = branding::centered_column(area, branding::CENTER_MAX_WIDTH);
+
+    let palette_h = if app.palette.is_some() {
+        12u16
+    } else {
+        1u16
+    };
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([
-            Constraint::Length(2), // header
-            Constraint::Length(2), // tabs
-            Constraint::Min(0),    // content
-            Constraint::Length(1), // footer
+            Constraint::Length(2),
+            Constraint::Length(2),
+            Constraint::Min(0),
+            Constraint::Length(palette_h),
         ])
         .split(col);
 
-    // Header
-    frame.render_widget(
-        Paragraph::new(vec![
-            Line::from(Span::styled("rulof van der merwe", Style::default().fg(TEXT).add_modifier(Modifier::BOLD))),
-            Line::from(Span::styled("─────────────────────", Style::default().fg(ACCENT))),
-        ]),
-        chunks[0],
-    );
+    render_site_header(frame, chunks[0]);
 
-    // Tabs
     let tab_labels: Vec<Line> = TABS.iter().map(|t| Line::from(Span::raw(*t))).collect();
     frame.render_widget(
         Tabs::new(tab_labels)
@@ -134,7 +259,6 @@ fn render(frame: &mut Frame, app: &App) {
         chunks[1],
     );
 
-    // Content
     let body = match app.tab {
         0 => content::ABOUT,
         1 => content::EXPERIENCE,
@@ -146,54 +270,173 @@ fn render(frame: &mut Frame, app: &App) {
     frame.render_widget(
         Paragraph::new(body)
             .style(Style::default().fg(TEXT))
-            .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(SURFACE2)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(SURFACE2)),
+            )
             .wrap(Wrap { trim: true }),
         chunks[2],
     );
 
-    // Footer
-    frame.render_widget(
-        Paragraph::new(Span::styled(
-            "← → or h/l · q to quit",
-            Style::default().fg(MUTED),
-        )),
-        chunks[3],
-    );
-}
+    if let Some(p) = &app.palette {
+        let title_line = Line::from(vec![
+            Span::styled(" /", Style::default().fg(branding::ACCENT)),
+            Span::styled(p.query.as_str(), Style::default().fg(TEXT)),
+            Span::styled("▏", Style::default().fg(MUTED)),
+        ]);
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(SURFACE2))
+            .title(title_line);
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+        let inner = block.inner(chunks[3]);
+        frame.render_widget(block, chunks[3]);
+
+        let inner_split = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(1)])
+            .split(inner);
+
+        let pairs = palette_filtered(&p.query);
+        let mut lines: Vec<Line> = Vec::new();
+
+        if pairs.is_empty() {
+            lines.push(Line::from(Span::styled(
+                "no matches",
+                Style::default().fg(MUTED),
+            )));
+        } else {
+            for (i, (pal_idx, _, secret)) in pairs.iter().enumerate() {
+                let label = PALETTE[*pal_idx].0;
+                let is_sel = i == p.selected;
+                let prefix = if is_sel { "▸ " } else { "  " };
+                let style = if is_sel {
+                    Style::default()
+                        .fg(ACCENT_STR)
+                        .add_modifier(Modifier::BOLD)
+                } else if *secret {
+                    Style::default().fg(MUTED)
+                } else {
+                    Style::default().fg(TEXT)
+                };
+                lines.push(Line::from(vec![
+                    Span::styled(prefix, style),
+                    Span::styled(label, style),
+                ]));
+            }
+        }
+
+        frame.render_widget(Paragraph::new(lines), inner_split[0]);
+        render_footer_hint(
+            frame,
+            inner_split[1],
+            "↑ ↓ select · Enter go · Esc cancel",
+        );
+    } else {
+        render_footer_hint(
+            frame,
+            chunks[3],
+            "← → or h/l · / jump · q quit",
+        );
+    }
+}
 
 pub async fn run(
     handle: Handle,
     channel: ChannelId,
-    mut input_rx: mpsc::UnboundedReceiver<Vec<u8>>,
+    mut event_rx: mpsc::UnboundedReceiver<TuiEvent>,
     cols: u16,
     rows: u16,
+    start: SessionStart,
+    channel_mode: ChannelMode,
 ) -> Result<()> {
-    let mut writer = SshWriter { handle: handle.clone(), channel, buf: Vec::new() };
+    let mut writer = SshWriter::new(handle.clone(), channel);
 
     execute!(writer, EnterAlternateScreen, cursor::Hide)?;
 
     let backend = CrosstermBackend::new(writer);
-    let mut terminal = Terminal::with_options(backend, TerminalOptions {
-        viewport: Viewport::Fixed(Rect::new(0, 0, cols, rows)),
-    })?;
+    let mut terminal = Terminal::with_options(
+        backend,
+        TerminalOptions {
+            viewport: Viewport::Fixed(Rect::new(0, 0, cols, rows)),
+        },
+    )?;
 
     let mut app = App::new();
+    let mut egg = KanaEgg::new();
+
+    if matches!(start, SessionStart::Kana) {
+        let mut kana_app = kana::new_app();
+        kana::run_session(&mut terminal, &mut event_rx, &mut kana_app).await?;
+    }
+
     terminal.draw(|f| render(f, &app))?;
 
     loop {
-        match input_rx.recv().await {
+        match event_rx.recv().await {
             None => break,
-            Some(data) => {
-                let quit = handle_input(&data, &mut app);
+            Some(TuiEvent::Resize { cols, rows }) => {
+                terminal.resize(Rect::new(0, 0, cols, rows))?;
                 terminal.draw(|f| render(f, &app))?;
-                if quit { break; }
+            }
+            Some(TuiEvent::Input(data)) => {
+                if let Some(ref mut p) = app.palette {
+                    match handle_palette_input(&data, p) {
+                        PaletteAction::Dismiss => {
+                            app.palette = None;
+                            terminal.draw(|f| render(f, &app))?;
+                        }
+                        PaletteAction::Go(goto) => {
+                            app.palette = None;
+                            match goto {
+                                GoTo::Section(i) => app.tab = i,
+                                GoTo::Kana => {
+                                    let mut kana_app = kana::new_app();
+                                    kana::run_session(&mut terminal, &mut event_rx, &mut kana_app)
+                                        .await?;
+                                }
+                            }
+                            terminal.draw(|f| render(f, &app))?;
+                        }
+                        PaletteAction::Stay => {
+                            let filtered = palette_filtered(&p.query);
+                            if !filtered.is_empty() && p.selected >= filtered.len() {
+                                p.selected = filtered.len() - 1;
+                            }
+                            terminal.draw(|f| render(f, &app))?;
+                        }
+                    }
+                    continue;
+                }
+
+                if data == b"/" {
+                    app.palette = Some(PaletteState::new());
+                    terminal.draw(|f| render(f, &app))?;
+                    continue;
+                }
+
+                match handle_site_input(&data, &mut app) {
+                    SiteAction::Quit => break,
+                    SiteAction::Handled => {
+                        terminal.draw(|f| render(f, &app))?;
+                    }
+                    SiteAction::PassThrough => {
+                        if egg.feed(&data) {
+                            let mut kana_app = kana::new_app();
+                            kana::run_session(&mut terminal, &mut event_rx, &mut kana_app).await?;
+                            terminal.draw(|f| render(f, &app))?;
+                        }
+                    }
+                }
             }
         }
     }
 
     execute!(terminal.backend_mut(), LeaveAlternateScreen, cursor::Show)?;
+    if matches!(channel_mode, ChannelMode::Exec) {
+        let _ = handle.exit_status_request(channel, 0).await;
+    }
     let _ = handle.close(channel).await;
 
     Ok(())
