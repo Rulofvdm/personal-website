@@ -1,3 +1,94 @@
-main {
-  min-height: 100vh;
+@use '../styles/variables.scss' as variables;
+
+// rng-tui reuses the same border slot ids on every frame — scope to the outer status row only.
+:host ::ng-deep #outer-container-frame > .tui-frame__row--middle + .tui-frame__row--h {
+  > .tui-frame__edge-h-run {
+    background-color: variables.$gruvbox-bg1;
+  }
+
+  #tui-border-bottom-center {
+    color: variables.$gruvbox-green;
+  }
+}
+
+tui-frame.content-frame {
+  transition: background-color 0.1s linear;
+  &:hover {
+    background-color: variables.$gruvbox-bg0;
+  }
+}
+
+:host ::ng-deep tui-frame.content-frame > .tui-frame__row--h #tui-border-top-left {
+  color: variables.$gruvbox-green;
+}
+
+.accent-bold {
+  color: variables.$gruvbox-green;
+  font-weight: bold;
+}
+
+.accent-blue {
+  color: variables.$gruvbox-blue;
+}
+
+.aqua {
+  color: variables.$gruvbox-aqua;
+}
+
+.blue {
+  color: variables.$gruvbox-blue;
+}
+
+.purple {
+  color: variables.$gruvbox-purple;
+}
+
+.orange {
+  color: variables.$gruvbox-orange;
+}
+
+.muted {
+  color: variables.$gruvbox-fg4;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link {
+  cursor: pointer;
+  &:hover {
+    background-color: variables.$gruvbox-bg1;
+  }
+}
+
+.mobile-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 30%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &--prev {
+    left: 0;
+  }
+
+  &--next {
+    right: 0;
+  }
 }

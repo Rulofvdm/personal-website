@@ -1,8 +1,278 @@
-<main>
-  <app-hero />
-  <app-about />
-  <app-experience />
-  <app-skills />
-  <app-projects />
-  <app-contact />
-</main>
+@if (isMobileLayout()) {
+  <div class="mobile-shell">
+    <button
+      type="button"
+      class="mobile-nav mobile-nav--prev"
+      aria-label="Previous screen"
+      [disabled]="currentPageIndex() === 0"
+      (click)="prevScreen()"
+    ></button>
+    <button
+      type="button"
+      class="mobile-nav mobile-nav--next"
+      aria-label="Next screen"
+      [disabled]="currentPageIndex() === pageCount - 1"
+      (click)="nextScreen()"
+    ></button>
+
+    <tui-terminal>
+      <tui-frame [hideBorders]="{ all: true }" [margins]="{ left: 1, right: 1 }">
+        <tui-frame
+          id="outer-container-frame"
+          [fillY]="1"
+          [hideBorders]="{ all: true }"
+          [borderContent]="mobileFooter()"
+        >
+          @switch (currentPageIndex()) {
+            @case (0) {
+              <tui-frame
+                [contentLayout]="'column'"
+                [fillY]="1"
+                [hideBorders]="{ all: true }"
+              >
+                <tui-frame
+                  class="content-frame"
+                  [height]="5"
+                  [borderContent]="{ top: { left: ' Info ' } }"
+                >
+                  <ng-container [ngTemplateOutlet]="infoTpl" />
+                </tui-frame>
+                <tui-frame
+                  class="content-frame"
+                  [fillY]="4"
+                  [borderContent]="{ top: { left: ' About ' } }"
+                >
+                  <ng-container [ngTemplateOutlet]="aboutTpl" />
+                </tui-frame>
+                <tui-frame
+                  class="content-frame"
+                  [fillY]="2"
+                  [borderContent]="{ top: { left: ' Experience ' } }"
+                >
+                  <ng-container [ngTemplateOutlet]="experienceTpl" />
+                </tui-frame>
+              </tui-frame>
+            }
+            @case (1) {
+              <tui-frame
+                [contentLayout]="'column'"
+                [fillY]="1"
+                [hideBorders]="{ all: true }"
+              >
+                <tui-frame
+                  class="content-frame"
+                  [fillY]="1"
+                  [borderContent]="{ top: { left: ' Projects ' } }"
+                >
+                  <ng-container [ngTemplateOutlet]="projectsTpl" />
+                </tui-frame>
+                <tui-frame
+                  class="content-frame"
+                  [fillY]="1"
+                  [borderContent]="{ top: { left: ' Contact ' } }"
+                >
+                  <ng-container [ngTemplateOutlet]="contactTpl" />
+                </tui-frame>
+                <tui-frame
+                  class="content-frame"
+                  [fillY]="1"
+                  [borderContent]="{ top: { left: ' Thingamabobs ' } }"
+                >
+                  <ng-container [ngTemplateOutlet]="thingamabobsTpl" />
+                </tui-frame>
+              </tui-frame>
+            }
+          }
+        </tui-frame>
+      </tui-frame>
+    </tui-terminal>
+  </div>
+} @else {
+  <tui-terminal>
+    <tui-frame [hideBorders]="{ all: true }" [margins]="{ left: 2, right: 2 }">
+      <tui-frame [contentLayout]="'row'" [hideBorders]="{ all: true }">
+        @if (showSidePadding()) {
+          <tui-frame [hideBorders]="{ all: true }" [fillX]="sidePaddingFillX()"></tui-frame>
+        }
+
+        <tui-frame
+          id="outer-container-frame"
+          [fillX]="10"
+          [hideBorders]="{ all: true }"
+          [borderContent]="{ bottom: { left: ' rmux', center: '0:rulof_s-tui', right: 'main ' } }"
+        >
+          <tui-frame
+            class="content-frame"
+            [fillX]="1"
+            [height]="3"
+            [borderContent]="{ top: { left: ' Info ' } }"
+          >
+            <ng-container [ngTemplateOutlet]="infoTpl" />
+          </tui-frame>
+
+          <tui-frame
+            [contentLayout]="'row'"
+            [fillY]="2"
+            [hideBorders]="{ all: true }"
+          >
+            <tui-frame
+              class="content-frame"
+              [fillX]="5"
+              [borderContent]="{ top: { left: ' About ' } }"
+            >
+              <ng-container [ngTemplateOutlet]="aboutTpl" />
+            </tui-frame>
+
+            <tui-frame
+              class="content-frame"
+              [fillX]="4"
+              [borderContent]="{ top: { left: ' Experience ' } }"
+            >
+              <ng-container [ngTemplateOutlet]="experienceTpl" />
+            </tui-frame>
+          </tui-frame>
+
+          <tui-frame [contentLayout]="'row'" [hideBorders]="{ all: true }">
+            <tui-frame
+              class="content-frame"
+              [fillX]="3"
+              [borderContent]="{ top: { left: ' Projects ' } }"
+            >
+              <ng-container [ngTemplateOutlet]="projectsTpl" />
+            </tui-frame>
+
+            <tui-frame
+              class="content-frame"
+              [fillX]="3"
+              [borderContent]="{ top: { left: ' Contact ' } }"
+            >
+              <ng-container [ngTemplateOutlet]="contactTpl" />
+            </tui-frame>
+
+            <tui-frame
+              class="content-frame"
+              [fillX]="3"
+              [borderContent]="{ top: { left: ' Thingamabobs ' } }"
+            >
+              <ng-container [ngTemplateOutlet]="thingamabobsTpl" />
+            </tui-frame>
+          </tui-frame>
+        </tui-frame>
+
+        @if (showSidePadding()) {
+          <tui-frame [hideBorders]="{ all: true }" [fillX]="sidePaddingFillX()"></tui-frame>
+        }
+      </tui-frame>
+    </tui-frame>
+  </tui-terminal>
+}
+
+<ng-template #infoTpl>
+  <span>
+    <span class="blue">#</span>
+    Rulof van der Merwe
+    <span class="muted">· Mid-level Full-stack Developer</span>
+  </span>
+</ng-template>
+
+<ng-template #aboutTpl>
+  <span>
+    <span class="aqua">· </span>
+    I build web applications and the infrastructure around them.<br /><br />
+  </span>
+  <span>
+    <span class="aqua">· </span>
+    Four years in production across Angular frontends, GraphQL APIs, and PostgreSQL backends.<br /><br />
+  </span>
+  <span>
+    <span class="aqua">· </span>
+    Currently deepening into systems programming with Rust.<br /><br />
+  </span>
+</ng-template>
+
+<ng-template #experienceTpl>
+  <span>
+    <span class="blue"># </span>
+    <span class="orange">JOBJACK</span>
+    <span class="muted"> ~ 3 years</span>
+  </span>
+  <span>
+    <span class="aqua">·</span>
+    Angular, Typescript, Node.js, GraphQL, PostgreSQL<br /><br />
+  </span>
+  <span>
+    <span class="blue"># </span>
+    <span class="orange">Ergopak</span>
+    <span class="muted"> ~ 1 years</span>
+  </span>
+  <span>
+    <span class="aqua">·</span>
+    WinForms, WPF, XAML, PostgreSQL<br /><br />
+  </span>
+</ng-template>
+
+<ng-template #projectsTpl>
+  <a
+    class="link"
+    href="https://github.com/Rulofvdm/personal-website"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <span class="blue"># </span>
+    <span class="orange">rulof.dev <span class="muted">󰌷</span></span>
+  </a>
+  <span>
+    <span class="aqua">·</span>
+    Angular, TypeScript, SCSS, Cloudflare Pages<br /><br />
+  </span>
+  <a
+    class="link"
+    href="https://github.com/Rulofvdm/rng-tui"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <span class="blue"># </span>
+    <span class="orange">rng-tui <span class="muted">󰌷</span></span>
+  </a>
+  <span>
+    <span class="aqua">·</span>
+    Angular, TypeScript<br /><br />
+  </span>
+</ng-template>
+
+<ng-template #contactTpl>
+  <a
+    class="link"
+    href="https://www.linkedin.com/in/rulof-vd-merwe/"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <span class="blue">&nbsp; </span>
+    <span class="orange">Linkedin <span class="muted">󰌷</span></span>
+  </a>
+  <a
+    class="link"
+    href="https://nunya.business"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <span class="blue">&nbsp; </span>
+    <span class="orange">Email <span class="muted">󰌷</span></span>
+  </a>
+  <span class="link" (click)="copySsh()">
+    <span class="blue">&nbsp; </span>
+    <span class="orange">ssh <span class="muted">󰌷</span></span>
+    @if (copied()) {
+      <span class="muted">&nbsp;Copied!</span>
+    }
+  </span>
+</ng-template>
+
+<ng-template #thingamabobsTpl>
+  <img
+    src="https://i.pinimg.com/originals/ef/c4/15/efc41596b460a494bfb65eb1cfe883df.png"
+    alt="Thingamabobs"
+    width="150px"
+    height="150px"
+  />
+</ng-template>
